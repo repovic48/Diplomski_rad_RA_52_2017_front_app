@@ -11,6 +11,7 @@ import RestaurantLogin from "./app_pages/Restaurant/RestaurantLogin/RestaurantLo
 import RestaurantActivateAccount from "./app_pages/Restaurant/RestaurantLogin/RestaurantActivateAccount";
 import RestaurantLandingPage from "./app_pages/Restaurant/RestaurantLandingPage/RestaurantLandingPage.js";
 import RestaurantMenu from "./app_pages/Restaurant/RestaurantLandingPage/RestaurantMenu/RestaurantMenu.js"
+import RestaurantNotifications from "./app_pages/Restaurant/RestaurantNotifications/RestaurantNotifications.js"
 import Navbar from './Navbar';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/RestaurantActivateAccount" element={<RestaurantActivateAccount />} />
         <Route path="/RestaurantLandingPage" element={<RestaurantLandingPage />} />
         <Route path="/RestaurantMenu" element={<RestaurantMenu />} />
+        <Route path="/RestaurantNotifications" element={<RestaurantNotifications />} />
       </Routes>
     </BrowserRouter>
   );

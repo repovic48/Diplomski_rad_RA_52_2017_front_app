@@ -51,7 +51,7 @@ const RestaurantLandingPage = () => {
           </div>
           <div className="col-6 col-md-4">
             <button
-              onClick={() => navigate("/obavestenja", { state: { loggedInRestaurant: loggedInRestaurant } })}
+              onClick={() => navigate("/RestaurantNotifications", { state: { loggedInRestaurant: loggedInRestaurant } })}
               className="form-control"
               style={buttonStyle}
             >

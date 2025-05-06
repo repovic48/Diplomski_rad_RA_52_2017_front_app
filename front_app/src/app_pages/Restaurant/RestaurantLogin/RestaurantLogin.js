@@ -45,7 +45,8 @@ const RestaurantLogin = () => {
         "verification_code": 1,
         "account_active": false,
         "account_suspended": true,
-        "menu": []
+        "menu": [],
+        "notifications" : []
       }
 
       const response = await axios.post(

@@ -57,7 +57,8 @@ const RestaurantRegister = () => {
       verification_code: "0000", // Auto-generated verification code
       account_active: false,  // Default value
       account_suspended: false,  // Default value
-      menu: []
+      menu: [],
+      notifications: [],
     };
 
     try {

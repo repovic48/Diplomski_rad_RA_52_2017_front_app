@@ -6,9 +6,19 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "assert": "^2.1.0",
+    "axios": "^1.7.9",
+    "bootstrap": "^5.3.3",
+    "https-browserify": "^1.0.0",
+    "net-browserify": "^0.2.4",
+    "querystring-es3": "^0.2.1",
     "react": "^18.3.1",
+    "react-bootstrap": "^2.10.6",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
+    "resend": "^4.1.2",
+    "tls-browserify": "^0.2.2",
+    "url": "^0.11.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -34,5 +44,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "react-router-dom": "^7.0.1"
   }
 }
