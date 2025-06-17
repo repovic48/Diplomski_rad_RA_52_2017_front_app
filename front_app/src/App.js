@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./app_pages/Home/Home";
+import SelectedRestaurant from "./app_pages/Home/SelectedRestaurant";
 import Register from "./app_pages/Register/Register";
 import Login from "./app_pages/Login/Login";
 import ActivateAccount from "./app_pages/Login/ActivateAccount";
@@ -20,14 +21,13 @@ export default function App() {
       <Navbar /> {/* Navbar sada može da reaguje na promene rute */}
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/SelectedRestaurant" element={<SelectedRestaurant />} />
         <Route path="/ActivateAccount" element={<ActivateAccount />} />
-        <Route path="/dashboard" element={<Home />} />
         <Route path="/SignUp" element={<Register />} />
         <Route path="/LogIn" element={<Login />} />
         <Route path="/AdministratorLandingPage" element={<AdministratorLandingPage />} />
         <Route path="/RestaurantRegistration" element={<RestaurantRegister />} />
         <Route path="/RestaurantLogin" element={<RestaurantLogin />} />
-        <Route path="/RestaurantActivateAccount" element={<RestaurantActivateAccount />} />
         <Route path="/RestaurantActivateAccount" element={<RestaurantActivateAccount />} />
         <Route path="/RestaurantLandingPage" element={<RestaurantLandingPage />} />
         <Route path="/RestaurantMenu" element={<RestaurantMenu />} />

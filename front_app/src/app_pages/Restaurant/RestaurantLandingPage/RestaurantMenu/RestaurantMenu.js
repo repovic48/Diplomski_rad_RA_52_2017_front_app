@@ -14,6 +14,7 @@ const RestaurantMenu = () => {
     cena: "",
     slika: "",
     dostupnost: true,
+    popust: 0,
   });
   const [editMode, setEditMode] = useState(false);
   const [editingFoodId, setEditingFoodId] = useState(null);
@@ -67,6 +68,7 @@ const RestaurantMenu = () => {
       cena: food.price,
       slika: food.image,
       dostupnost: food.available,
+      popust: food.discount || 0,
     });
     setEditingFoodId(food.id);
     setEditMode(true);
@@ -94,7 +96,7 @@ const RestaurantMenu = () => {
       image: newFood.slika,
       restaurant_id: restaurant.id,
       available: newFood.dostupnost,
-      discount: 0,
+      discount: newFood.popust,
     };
 
     const request = editMode
@@ -112,7 +114,7 @@ const RestaurantMenu = () => {
         }
 
         setShowModal(false);
-        setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true });
+        setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true, popust: 0 });
         setEditMode(false);
         setEditingFoodId(null);
       })
@@ -141,12 +143,12 @@ const RestaurantMenu = () => {
         <table className="table table-bordered table-hover align-middle text-center" style={{ backgroundColor: "#82b74b", color: "white" }}>
           <thead style={{ backgroundColor: "#6ba446", color: "white" }}>
             <tr>
-              <th style={{ backgroundColor: "#82b74b", color: "white", width: "256px" }}></th>
-              <th style={{ backgroundColor: "#82b74b", color: "white" }}>Naziv</th>
-              <th style={{ backgroundColor: "#82b74b", color: "white" }}>Cena</th>
-              <th style={{ backgroundColor: "#82b74b", color: "white" }}>Dostupnost</th>
-              <th style={{ backgroundColor: "#82b74b", color: "white" }}>Popust</th>
-              <th style={{ backgroundColor: "#82b74b", color: "white" }}>Opcije</th>
+              <th style={{ width: "256px" }}></th>
+              <th>Naziv</th>
+              <th>Cena</th>
+              <th>Dostupnost</th>
+              <th>Popust</th>
+              <th>Opcije</th>
             </tr>
           </thead>
           <tbody>
@@ -158,7 +160,7 @@ const RestaurantMenu = () => {
                 <td>{food.name}</td>
                 <td>{food.price} RSD</td>
                 <td>{food.available ? "Na stanju" : "Nedostupno"}</td>
-                <td>{food.discount || 0}</td>
+                <td>{food.discount || 0}%</td>
                 <td>
                   <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(food)}>Izmeni</button>
                   <button className="btn btn-sm btn-danger" onClick={() => handleDelete(food.id)}>Obriši</button>
@@ -177,7 +179,7 @@ const RestaurantMenu = () => {
           onClick={() => {
             setShowModal(true);
             setEditMode(false);
-            setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true });
+            setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true, popust: 0 });
           }}
         >
           Dodaj stavku
@@ -212,6 +214,20 @@ const RestaurantMenu = () => {
                     name="cena"
                     value={newFood.cena}
                     onChange={handleInputChange}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Popust (%)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    name="popust"
+                    min="0"
+                    max="100"
+                    value={newFood.popust}
+                    onChange={(e) =>
+                      setNewFood((prev) => ({ ...prev, popust: parseInt(e.target.value) || 0 }))
+                    }
                   />
                 </div>
                 <div className="mb-3">

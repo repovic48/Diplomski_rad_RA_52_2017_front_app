@@ -63,7 +63,8 @@ const RestaurantLogin = () => {
         setSuccessMessage('Prijava uspešna!');
 
         const token = response.data; // Assuming JWT token is returned in response
-        localStorage.setItem('token', token); // Store token in local storage
+        localStorage.setItem('restaurant_jwt', token); // Store token in local storage
+        localStorage.setItem('restaurant_email', dataToSend.email); // Store token in local storage
 
         const decodedToken = jwtDecode(token); // Decode the JWT token
 

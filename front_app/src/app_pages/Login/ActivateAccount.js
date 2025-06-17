@@ -51,7 +51,7 @@ const ActivateAccount = () => {
       
         if (response.status === 200) {
           setSuccessMessage('Verifikacija uspešna!');
-          setTimeout(() => navigate('/dashboard'), 2000);
+          setTimeout(() => navigate('/'), 2000);
         } else {
           setError('Neispravan kod. Pokušajte ponovo.');
         }
