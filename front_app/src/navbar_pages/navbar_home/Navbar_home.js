@@ -22,7 +22,7 @@ function Navbar_home() {
   };
 
   const handleAccount = () => {
-    navigate('/myAccount');
+    navigate('/MyOrders');
   };
 
   return (
@@ -42,7 +42,7 @@ function Navbar_home() {
           {isLoggedIn ? (
           <>
             <Nav.Link onClick={handleAccount} style={{ fontSize: '150%', cursor: 'pointer' }}>
-              <b><u>Moj Nalog</u></b>
+              <b><u>Istorija porudžbina</u></b>
             </Nav.Link>
             <Nav.Link onClick={handleLogout} style={{ fontSize: '150%', cursor: 'pointer' }}>
               <b><u>Odjavi se</u></b>

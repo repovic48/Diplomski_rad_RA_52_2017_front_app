@@ -9,6 +9,7 @@ const AdministratorLandingPage = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [editingRestaurantEmail, setEditingRestaurantEmail] = useState(null);
   const [editedRestaurants, setEditedRestaurants] = useState({});
+  const [comments, setComments] = useState([]);
 
   useEffect(() => {
     axios.get("http://localhost:8080/api/restaurant/getAllRestaurants")
@@ -26,6 +27,15 @@ const AdministratorLandingPage = () => {
       .catch(error => {
         console.error('Greška pri dohvaćanju korisnika:', error);
       });
+
+  axios.get("http://localhost:8080/api/comment/getAllComments")
+    .then((response) => {
+      const filtered = response.data.filter(comment => comment.delete_requested === true && comment.deleted !== true);
+      setComments(filtered);
+    })
+    .catch((error) => {
+      console.error("Greška pri dohvaćanju komentara:", error);
+    });
   }, []);
 
   const getUserType = (type) => {
@@ -56,6 +66,38 @@ const AdministratorLandingPage = () => {
       delete newState[userId];
       return newState;
     });
+  };
+
+const handleAcceptCommentDelete = async (commentId) => {
+  const commentToUpdate = comments.find(c => c.id === commentId);
+  if (!commentToUpdate) return;
+
+  const updatedComment = { ...commentToUpdate, deleted: true };
+
+  try {
+    await axios.put("http://localhost:8080/api/comment/updateComment/" + updatedComment.id, updatedComment, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    setComments(comments.filter(comment => comment.id !== commentId));
+  } catch (error) {
+    console.error("Greška pri prihvatanju brisanja komentara:", error);
+  }
+};
+
+  const handleRejectCommentDelete = async (commentId) => {
+    const commentToUpdate = comments.find(c => c.id === commentId);
+    if (!commentToUpdate) return;
+
+    const updatedComment = { ...commentToUpdate, delete_requested: false };
+
+    try {
+      await axios.put("http://localhost:8080/api/comment/updateComment/" + updatedComment.id, updatedComment, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      setComments(comments.filter(comment => comment.id !== commentId));
+    } catch (error) {
+      console.error("Greška pri odbijanju brisanja komentara:", error);
+    }
   };
 
   const handleSaveEdit = async (userId) => {
@@ -338,6 +380,53 @@ const AdministratorLandingPage = () => {
           ))}
         </tbody>
       </Table>
+
+      <h2 className="mt-4">Zahtevi za brisanje komentara</h2>
+      <Table striped bordered hover className="mt-3">
+        <thead>
+          <tr>
+            <th>Autor</th>
+            <th>Sadržaj</th>
+            <th>Datum</th>
+            <th>Ocena</th>
+            <th>Akcije</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comments.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="text-center">Nema komentara za brisanje.</td>
+            </tr>
+          ) : (
+            comments.map(comment => (
+              <tr key={comment.id}>
+                <td>{comment.author}</td>
+                <td>{comment.content}</td>
+                <td>{new Date(comment.date).toLocaleDateString()}</td>
+                <td>{comment.comment_rating}</td>
+                <td>
+                  <Button
+                    variant="success"
+                    size="sm"
+                    className="me-2"
+                    onClick={() => handleAcceptCommentDelete(comment.id)}
+                  >
+                    Prihvati
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleRejectCommentDelete(comment.id)}
+                  >
+                    Odbij
+                  </Button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </Table>
+
     </Container>
   );
 };

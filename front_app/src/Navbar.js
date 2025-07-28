@@ -26,6 +26,9 @@ export default function Navbar() {
   else if (location.pathname === "/RestaurantMenu") {
     return <RestaurantLandingPage />;
   } 
+  else if (location.pathname === "/RestaurantComments") {
+    return <RestaurantLandingPage />;
+  } 
   else if (location.pathname === "/RestaurantNotifications") {
     return <RestaurantLandingPage />;
   } 

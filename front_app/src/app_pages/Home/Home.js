@@ -1,16 +1,37 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import Rating from "react-rating";
+import { FaStar, FaRegStar, FaStarHalfAlt } from "react-icons/fa";
 
 const Home = () => {
   const [restaurants, setRestaurants] = useState([]);
+  const [commentsMap, setCommentsMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios
       .get("http://localhost:8080/api/restaurant/getAllRestaurants")
-      .then((response) => {
-        setRestaurants(response.data);
+      .then(async (response) => {
+        const fetchedRestaurants = response.data;
+        setRestaurants(fetchedRestaurants);
+
+        const commentsObj = {};
+        await Promise.all(
+          fetchedRestaurants.map(async (restaurant) => {
+            try {
+              const res = await axios.get(
+                `http://localhost:8080/api/comment/getCommentsByRestaurantId/${restaurant.id}`
+              );
+              commentsObj[restaurant.id] = res.data;
+            } catch (error) {
+              console.error(`Error fetching comments for restaurant ${restaurant.id}:`, error);
+              commentsObj[restaurant.id] = [];
+            }
+          })
+        );
+
+        setCommentsMap(commentsObj);
         setLoading(false);
       })
       .catch((error) => {
@@ -21,6 +42,20 @@ const Home = () => {
 
   const calculateDiscountedPrice = (price, discount) => {
     return (price - price * (discount / 100)).toFixed(2);
+  };
+
+  // UPDATED calculateAverageRating to filter only comments with empty reply_to
+  const calculateAverageRating = (comments) => {
+    if (!comments || comments.length === 0) return null;
+
+    const topLevelComments = comments.filter(
+      (comment) => !comment.reply_to || comment.reply_to === ""
+    );
+
+    if (topLevelComments.length === 0) return null;
+
+    const sum = topLevelComments.reduce((acc, comment) => acc + comment.restaurant_rating, 0);
+    return (sum / topLevelComments.length).toFixed(1);
   };
 
   if (loading) {
@@ -40,17 +75,51 @@ const Home = () => {
       </h1>
       {restaurants.map((restaurant) => {
         const availableFoods = (restaurant.menu || []).filter((food) => food.available);
+        const comments = commentsMap[restaurant.id] || [];
+        const averageRating = calculateAverageRating(comments);
 
         return (
           <div key={restaurant.id} className="mb-5">
-            <h3 className="mb-3">
-              <Link
-                to={`/SelectedRestaurant`}
-                onClick={() => localStorage.setItem("selected_restaurant_id", restaurant.id)}
-                style={{ color: "#6ba446", textDecoration: "none" }}
-              >
-                <u><b>{restaurant.name}</b></u> (klikni za celu ponudu)
-              </Link>
+            <h3 className="mb-3 d-flex align-items-center justify-content-between">
+              <div>
+                <Link
+                  to={`/SelectedRestaurant`}
+                  onClick={() =>
+                    localStorage.setItem("selected_restaurant_id", restaurant.id)
+                  }
+                  style={{ color: "#6ba446", textDecoration: "none" }}
+                >
+                  <u><b>{restaurant.name}</b></u> (klikni za celu ponudu)
+                </Link>
+              </div>
+
+              <div className="d-flex align-items-center gap-2">
+                {averageRating ? (
+                  <>
+                    <Rating
+                      initialRating={averageRating}
+                      readonly
+                      emptySymbol={<FaRegStar color="#ffc107" />}
+                      fullSymbol={<FaStar color="#ffc107" />}
+                      halfSymbol={<FaStarHalfAlt color="#ffc107" />}
+                      fractions={2}
+                    />
+                    <span className="ms-2">{averageRating}</span>
+                    <Link
+                      to="/Comments"
+                      onClick={() =>
+                        localStorage.setItem("selected_restaurant_id", restaurant.id)
+                      }
+                      className="ms-3"
+                      style={{ color: "#6ba446", textDecoration: "none" }}
+                    >
+                      <u>utisci naših korisnika</u>
+                    </Link>
+                  </>
+                ) : (
+                  <span className="text-muted">N/A</span>
+                )}
+              </div>
             </h3>
 
             <div className="table-responsive">
@@ -63,14 +132,23 @@ const Home = () => {
                           <img
                             src={food.image}
                             alt={food.name}
-                            style={{ width: "64px", height: "64px", objectFit: "cover" }}
+                            style={{
+                              width: "64px",
+                              height: "64px",
+                              objectFit: "cover",
+                            }}
                           />
                         </td>
                         <td>{food.name}</td>
                         <td>
                           {food.discount > 0 ? (
                             <>
-                              <span style={{ textDecoration: "line-through", marginRight: "8px" }}>
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  marginRight: "8px",
+                                }}
+                              >
                                 {food.price} RSD
                               </span>
                               <span style={{ color: "red" }}>

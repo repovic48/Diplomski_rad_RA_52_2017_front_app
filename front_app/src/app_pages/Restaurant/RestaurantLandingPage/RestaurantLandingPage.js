@@ -42,11 +42,11 @@ const RestaurantLandingPage = () => {
           </div>
           <div className="col-6 col-md-4">
             <button
-              onClick={() => navigate("/akcije", { state: { loggedInRestaurant: loggedInRestaurant } })}
+              onClick={() => navigate("/RestaurantComments", { state: { loggedInRestaurant: loggedInRestaurant } })}
               className="form-control"
               style={buttonStyle}
             >
-              Akcije
+              Komentari i ocene
             </button>
           </div>
           <div className="col-6 col-md-4">

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Rating from "react-rating";
+import { FaStar, FaRegStar, FaStarHalfAlt } from "react-icons/fa";
 
 const SelectedRestaurant = () => {
   const [restaurant, setRestaurant] = useState(null);
@@ -8,6 +10,11 @@ const SelectedRestaurant = () => {
   const [items, setItems] = useState([]);
   const [user, setUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [hasUserCommented, setHasUserCommented] = useState(false);
+
   const [formData, setFormData] = useState({
     id: "",
     customer_email: "",
@@ -18,6 +25,60 @@ const SelectedRestaurant = () => {
     postal_code: "",
     card_number: ""
   });
+
+  const [comment, setComment] = useState({
+    id: "",
+    author: "",
+    restaurant_id: "",
+    author_email: "",
+    restaurant_rating: 0,
+    comment_rating: 0,
+    users_that_rated_comment: [],
+    content: "",
+    date: "",
+    
+  });
+
+  // Fetch comments and check if user has commented
+  const fetchComments = async (restaurantId, userEmail) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/api/comment/getCommentsByRestaurantId/${restaurantId}`
+      );
+      setComments(response.data);
+
+      if (userEmail) {
+        const userHasCommented = response.data.some(
+          (c) => c.author_email === userEmail
+        );
+        setHasUserCommented(userHasCommented);
+      } else {
+        setHasUserCommented(false);
+      }
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (items.length === 0) return;
+
+    const baseTotal = items.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+
+    let discountedTotal = baseTotal;
+
+    if (user && useLoyaltyPoints && user.loyalty_points > 0) {
+      discountedTotal = Math.max(0, baseTotal - user.loyalty_points);
+    }
+
+    setFormData((prevData) => ({
+      ...prevData,
+      total_price: discountedTotal.toFixed(2),
+    }));
+  }, [useLoyaltyPoints, items, user]);
 
   useEffect(() => {
     const restaurantId = localStorage.getItem("selected_restaurant_id");
@@ -35,10 +96,17 @@ const SelectedRestaurant = () => {
             postal_code: response.data.postal_code,
             card_number: response.data.card_number || "",
           }));
+          if (restaurantId) {
+            fetchComments(restaurantId, response.data.email);
+          }
         })
         .catch((error) => {
           console.error("Error fetching user data:", error);
         });
+    } else {
+      if (restaurantId) {
+        fetchComments(restaurantId, null);
+      }
     }
 
     if (!restaurantId) {
@@ -114,64 +182,165 @@ const SelectedRestaurant = () => {
     });
   };
 
-  const handleOrder = () => {
-    if (items.length === 0) {
-      alert("Nije odabran nijedan proizvod");
-    } else {
-      const totalPrice = items.reduce(
-        (total, item) => total + item.price * item.quantity,
-        0
-      );
-
-      setFormData((prevData) => ({
-        ...prevData,
-        total_price: totalPrice,
-        restaurant_id: localStorage.getItem("selected_restaurant_id"),
-        date_of_creation: new Date().toISOString(),
-      }));
-
-      setShowModal(true);
-    }
+  const getUserType = (type) => {
+    if (type === 0) return "Administrator";
+    if (type === 1) return "User";
+    return "Nepoznat";
   };
 
+
+const handleOrder = () => {
+  if (items.length === 0) {
+    alert("Nije odabran nijedan proizvod");
+    return;
+  }
+
+  const baseTotal = items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+
+  let discountedTotal = baseTotal;
+
+  if (user && useLoyaltyPoints && user.loyalty_points > 0) {
+    discountedTotal = Math.max(0, baseTotal - user.loyalty_points);
+  }
+
+  setFormData((prevData) => ({
+    ...prevData,
+    total_price: discountedTotal.toFixed(2),
+    restaurant_id: localStorage.getItem("selected_restaurant_id"),
+    date_of_creation: new Date().toISOString(),
+  }));
+
+  setShowModal(true);
+};
+
+
   const handleFormSubmit = async (event) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    const { address, postal_code, card_number, total_price, customer_email, restaurant_id } = formData;
+  const {
+    address,
+    postal_code,
+    card_number,
+    total_price,
+    customer_email,
+    restaurant_id,
+  } = formData;
 
-    if (!address || !postal_code || !card_number || !total_price || !restaurant_id) {
-      alert("Molimo popunite sva polja pre nego što pošaljete narudžbinu.");
+  if (!address || !postal_code || !card_number || !total_price || !restaurant_id) {
+    alert("Molimo popunite sva polja pre nego što pošaljete narudžbinu.");
+    return;
+  }
+
+  const orderPayload = {
+    ...formData,
+    items: [],
+  };
+
+  try {
+    const response = await axios.post(
+      "http://localhost:8080/api/order/addOrder",
+      orderPayload
+    );
+    const createdOrder = response.data;
+    const orderId = createdOrder.id;
+
+    for (const item of items) {
+      const itemPayload = {
+        ...item,
+        id: "",
+        order_id: orderId,
+      };
+      await axios.post("http://localhost:8080/api/order/addItem", itemPayload);
+    }
+
+    // ➕ Loyalty update
+    if (user) {
+  const baseTotalNum = Math.round(
+    items.reduce((total, item) => total + item.price * item.quantity, 0)
+  );
+
+  const totalPriceNum = Math.round(parseFloat(total_price));
+
+  let updatedPoints = user.loyalty_points;
+
+  if (useLoyaltyPoints) {
+    const used = baseTotalNum - totalPriceNum;
+    updatedPoints = Math.max(0, updatedPoints - used);
+  } else {
+    // Dodavanje 4% poena, uz zaokruživanje
+    updatedPoints += Math.round(baseTotalNum * 0.04);
+  }
+
+  const updatedUser = {
+    ...user,
+    user_type: getUserType(user.user_type),
+    loyalty_points: updatedPoints,
+  };
+
+  try {
+    const userResponse = await axios.put(
+      `http://localhost:8080/api/user/update`,
+      updatedUser
+    );
+    setUser(userResponse.data);
+  } catch (error) {
+    console.error("Greška pri ažuriranju korisnika:", error);
+  }
+}
+
+    alert("Narudžbina uspešno poslata!");
+    setShowModal(false);
+    setItems([]);
+    setQuantities({});
+    setUseLoyaltyPoints(false);
+  } catch (error) {
+    console.error("Greška pri slanju narudžbine:", error);
+    alert("Došlo je do greške prilikom slanja narudžbine.");
+  }
+};
+
+  const handleCommentSubmit = async () => {
+    if (!comment.author || !comment.content || comment.restaurant_rating === 0) {
+      alert("Popunite sve podatke i ocenite restoran pre slanja.");
       return;
     }
 
-    const orderPayload = {
-      ...formData,
-      items: []
+    const payload = {
+      ...comment,
+      id: "",
+      author_email: user.email,
+      restaurant_id: localStorage.getItem("selected_restaurant_id"),
+      comment_rating: 0,
+      users_that_rated_comment: [],
+      date: new Date().toISOString(),
     };
 
     try {
-      // Step 1: Save the order
-      const response = await axios.post("http://localhost:8080/api/order/addOrder", orderPayload);
-      const createdOrder = response.data;
-      const orderId = createdOrder.id;
-
-      // Step 2: Send each item with order_id
-      for (const item of items) {
-        const itemPayload = {
-          ...item,
-          id: "",
-          order_id: orderId
-        };
-        await axios.post("http://localhost:8080/api/order/addItem", itemPayload);
+      await axios.post("http://localhost:8080/api/comment/addComment", payload);
+      alert("Vaša ocena je uspešno poslata.");
+      setShowRatingModal(false);
+      setComment({
+        id: "",
+        author: "",
+        restaurant_id: "",
+        author_email: "",
+        restaurant_rating: 0,
+        comment_rating: 0,
+        users_that_rated_comment: [],
+        content: "",
+        date: "",
+      });
+      // Refresh comments after submitting new comment
+      const restaurantId = localStorage.getItem("selected_restaurant_id");
+      if (restaurantId && user) {
+        fetchComments(restaurantId, user.email);
       }
-
-      alert("Narudžbina uspešno poslata!");
-      setShowModal(false);
-      setItems([]);
-      setQuantities({});
     } catch (error) {
-      console.error("Greška pri slanju narudžbine:", error);
-      alert("Došlo je do greške prilikom slanja narudžbine.");
+      console.error("Greška pri slanju komentara:", error);
+      alert("Došlo je do greške prilikom slanja komentara.");
     }
   };
 
@@ -186,7 +355,9 @@ const SelectedRestaurant = () => {
   }
 
   if (!restaurant) {
-    return <div className="text-center text-danger mt-5">Restoran nije pronađen.</div>;
+    return (
+      <div className="text-center text-danger mt-5">Restoran nije pronađen.</div>
+    );
   }
 
   const availableFoods = (restaurant.menu || []).filter((food) => food.available);
@@ -226,9 +397,19 @@ const SelectedRestaurant = () => {
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-danger me-2" onClick={() => decrement(food)}>-</button>
+                    <button
+                      className="btn btn-sm btn-danger me-2"
+                      onClick={() => decrement(food)}
+                    >
+                      -
+                    </button>
                     <span>{quantities[food.id]}</span>
-                    <button className="btn btn-sm btn-success ms-2" onClick={() => increment(food)}>+</button>
+                    <button
+                      className="btn btn-sm btn-success ms-2"
+                      onClick={() => increment(food)}
+                    >
+                      +
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -240,92 +421,241 @@ const SelectedRestaurant = () => {
       )}
 
       <div className="text-center mt-4">
-        <button className="btn btn-primary px-5 py-2" onClick={handleOrder}>
+        <button
+          className="btn px-5 py-2 text-white"
+          style={{ backgroundColor: "#82b74b", border: "none" }}
+          onClick={handleOrder}
+        >
           Naruči
         </button>
       </div>
 
+      {user && (
+        <div className="text-center mt-2">
+          <span
+            onClick={() => !hasUserCommented && setShowRatingModal(true)}
+            style={{
+              textDecoration: hasUserCommented ? "none" : "underline",
+              color: hasUserCommented ? "gray" : "#007bff",
+              cursor: hasUserCommented ? "default" : "pointer",
+              userSelect: "none",
+            }}
+            title={hasUserCommented ? "Već ste ocenili ovaj restoran" : ""}
+          >
+            Oceni restoran
+          </span>
+        </div>
+      )}
+
+      {/* Order Modal */}
       {showModal && (
-        <div className="modal fade show" tabIndex="-1" style={{ display: "block" }} aria-modal="true" role="dialog">
+  <div
+    className="modal fade show"
+    tabIndex="-1"
+    style={{ display: "block" }}
+    aria-modal="true"
+    role="dialog"
+  >
+    <div className="modal-dialog">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Potvrdi narudžbinu</h5>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setShowModal(false)}
+          ></button>
+        </div>
+        <div className="modal-body">
+          <form onSubmit={handleFormSubmit}>
+            <div className="form-group">
+              <label htmlFor="postal_code">Poštanski broj</label>
+              <select
+                id="postal_code"
+                className="form-control"
+                value={formData.postal_code}
+                onChange={(e) =>
+                  setFormData({ ...formData, postal_code: e.target.value })
+                }
+              >
+                <option value="11000">11000 – Beograd</option>
+                <option value="21000">21000 – Novi Sad</option>
+                <option value="18000">18000 – Niš</option>
+                <option value="34000">34000 – Kragujevac</option>
+                <option value="24000">24000 – Subotica</option>
+                <option value="23000">23000 – Zrenjanin</option>
+                <option value="16000">16000 – Leskovac</option>
+                <option value="37000">37000 – Kruševac</option>
+                <option value="25200">25200 – Sombor</option>
+                <option value="24300">24300 – Senta</option>
+                <option value="17500">17500 – Vranje</option>
+                <option value="32000">32000 – Čačak</option>
+                <option value="31000">31000 – Užice</option>
+                <option value="38000">38000 – Priština</option>
+                <option value="38227">38227 – Kosovska Mitrovica</option>
+              </select>
+            </div>
+            <hr />
+            <div className="form-group">
+              <label htmlFor="address">Adresa</label>
+              <input
+                type="text"
+                id="address"
+                className="form-control"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group mt-3">
+              <label htmlFor="card_number">Broj kartice</label>
+              <input
+                type="text"
+                id="card_number"
+                className="form-control"
+                value={formData.card_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, card_number: e.target.value })
+                }
+                placeholder="Unesite broj kartice"
+              />
+            </div>
+
+            {/* Loyalty checkbox */}
+          {user && (
+            <div className="form-check mt-3">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="useLoyaltyPoints"
+                checked={useLoyaltyPoints}
+                disabled={user.loyalty_points <= 0}
+                onChange={(e) => setUseLoyaltyPoints(e.target.checked)}
+              />
+              <label htmlFor="useLoyaltyPoints">
+                Iskoristi loyalty poene ({user.loyalty_points} RSD)
+              </label>
+            </div>
+          )}
+          <div className="form-group mt-3">
+            <strong>Ukupno: </strong>
+            {user && useLoyaltyPoints && user.loyalty_points > 0 ? (
+              <>
+                <span style={{ textDecoration: "line-through", marginRight: "8px" }}>
+                  {items
+                    .reduce((total, item) => total + item.price * item.quantity, 0)
+                    .toFixed(2)}{" "}
+                  RSD
+                </span>
+                <span style={{ color: "red" }}>{formData.total_price} RSD</span>
+              </>
+            ) : (
+              <span>{formData.total_price} RSD</span>
+            )}
+          </div>
+          <div className="modal-footer">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowModal(false)}
+          >
+            Otkaži
+          </button>
+          <button type="submit" className="btn btn-success">
+            Potvrdi porudžbinu
+          </button>
+        </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div
+          className="modal fade show"
+          tabIndex="-1"
+          style={{ display: "block" }}
+          aria-modal="true"
+          role="dialog"
+        >
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Potvrdi narudžbinu</h5>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                <h5 className="modal-title">Oceni restoran</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRatingModal(false)}
+                ></button>
               </div>
               <div className="modal-body">
-                <form onSubmit={handleFormSubmit}>
-                  <div className="form-group">
-                    <label htmlFor="postal_code">Poštanski broj</label>
-                    <select
-                      id="postal_code"
-                      className="form-control"
-                      value={formData.postal_code}
-                      onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                    >
-                      {user ? (
-                        <option value={formData.postal_code}>{formData.postal_code}</option>
-                      ) : (
-                        <option value="">Izaberite poštanski broj</option>
-                      )}
-                      <option value="11000">11000 – Beograd</option>
-                      <option value="21000">21000 – Novi Sad</option>
-                      <option value="18000">18000 – Niš</option>
-                      <option value="34000">34000 – Kragujevac</option>
-                      <option value="24000">24000 – Subotica</option>
-                      <option value="23000">23000 – Zrenjanin</option>
-                      <option value="16000">16000 – Leskovac</option>
-                      <option value="37000">37000 – Kruševac</option>
-                      <option value="25200">25200 – Sombor</option>
-                      <option value="24300">24300 – Senta</option>
-                      <option value="17500">17500 – Vranje</option>
-                      <option value="32000">32000 – Čačak</option>
-                      <option value="31000">31000 – Užice</option>
-                      <option value="38000">38000 – Priština</option>
-                      <option value="38227">38227 – Kosovska Mitrovica</option>
-                    </select>
-                  </div>
-
-                  <hr />
-
-                  <div className="form-group">
-                    <label htmlFor="address">Adresa</label>
-                    <input
-                      type="text"
-                      id="address"
-                      className="form-control"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                <div className="form-group mb-3">
+                  <label htmlFor="author">Nadimak</label>
+                  <input
+                    type="text"
+                    id="author"
+                    className="form-control"
+                    value={comment.author}
+                    onChange={(e) => setComment({ ...comment, author: e.target.value })}
+                  />
+                </div>
+                <div className="form-group mb-3">
+                  <label>Ocena restorana</label>
+                  <div>
+                    <Rating
+                      initialRating={comment.restaurant_rating}
+                      onChange={(value) =>
+                        setComment({ ...comment, restaurant_rating: value })
+                      }
+                      fractions={2}
+                      fullSymbol={<FaStar color="#ffc107" />}
+                      emptySymbol={<FaRegStar color="#ccc" />}
+                      placeholderSymbol={<FaStarHalfAlt color="#ffc107" />}
                     />
+                    <span className="ms-2">{comment.restaurant_rating.toFixed(1)} / 5</span>
                   </div>
-
-                  <div className="form-group mt-3">
-                    <label htmlFor="card_number">Broj kartice</label>
-                    <input
-                      type="text"
-                      id="card_number"
-                      className="form-control"
-                      value={formData.card_number}
-                      onChange={(e) => setFormData({ ...formData, card_number: e.target.value })}
-                      placeholder="Unesite broj kartice"
-                    />
-                  </div>
-
-                  <div className="form-group mt-3">
-                    <strong>Ukupno:</strong> {formData.total_price} RSD
-                  </div>
-
-                  <input type="hidden" name="customer_email" value={formData.customer_email} />
-                  <input type="hidden" name="restaurant_id" value={formData.restaurant_id} />
-                  <input type="hidden" name="date_of_creation" value={formData.date_of_creation} />
-                  <input type="hidden" name="total_price" value={formData.total_price} />
-
-                  <div className="form-group text-center mt-3">
-                    <button type="submit" className="btn btn-primary px-5 py-2">
-                      Potvrdi narudžbinu
-                    </button>
-                  </div>
-                </form>
+                </div>
+                <div className="form-group mb-3">
+                  <label htmlFor="content">Komentar</label>
+                  <textarea
+                    id="content"
+                    rows="3"
+                    className="form-control"
+                    value={comment.content}
+                    onChange={(e) => setComment({ ...comment, content: e.target.value })}
+                    placeholder="Napišite komentar..."
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowRatingModal(false);
+                    setComment({
+                      id: "",
+                      author: "",
+                      restaurant_id: "",
+                      author_email: "",
+                      restaurant_rating: 0,
+                      comment_rating: 0,
+                      users_that_rated_comment: [],
+                      content: "",
+                      date: "",
+                      delete_requested: false,
+                      deleted : false
+                    });
+                  }}
+                >
+                  Poništi
+                </button>
+                <button className="btn btn-success" onClick={handleCommentSubmit}>
+                  Oceni
+                </button>
               </div>
             </div>
           </div>
