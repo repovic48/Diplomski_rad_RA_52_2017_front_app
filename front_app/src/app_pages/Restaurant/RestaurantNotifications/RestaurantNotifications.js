@@ -4,8 +4,7 @@ import axios from 'axios';
 
 const RestaurantNotifications = () => {
   const location = useLocation();
-  const initialEmail = location.state?.loggedInRestaurant?.email;
-
+  const initialEmail = localStorage.getItem("restaurant_email")?.trim();
   const [loggedInRestaurant, setLoggedInRestaurant] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,7 +13,8 @@ const RestaurantNotifications = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const isRestaurantSuspended = loggedInRestaurant?.account_suspended;
+  
   // Fetch updated restaurant by email
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -71,8 +71,8 @@ const RestaurantNotifications = () => {
         {
           headers: {
             'Content-Type': 'application/json',
-          },
-          withCredentials: false,
+            Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+          }
         }
       );
   
@@ -83,8 +83,8 @@ const RestaurantNotifications = () => {
         const emailResponse = await axios.get('http://localhost:8080/api/user/getAllEmails', {
           headers: {
             'Content-Type': 'application/json',
-          },
-          withCredentials: false,
+              Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+          }
         });
   
         if (emailResponse.status === 200) {
@@ -97,8 +97,8 @@ const RestaurantNotifications = () => {
             {
               headers: {
                 'Content-Type': 'application/json',
-              },
-              withCredentials: false,
+                Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+              }
             }
           );
         }
@@ -138,6 +138,7 @@ const RestaurantNotifications = () => {
         {
           headers: {
             'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
           },
           withCredentials: false,
         }
@@ -222,33 +223,45 @@ const RestaurantNotifications = () => {
                     border: 'none',
                     padding: '6px 12px',
                     borderRadius: '4px',
-                    cursor: 'pointer'
+                    cursor: isRestaurantSuspended ? 'not-allowed' : 'pointer',
+                    opacity: isRestaurantSuspended ? 0.5 : 1,
                   }}
+                  disabled={isRestaurantSuspended}
+                  title={isRestaurantSuspended ? "Nalog je suspendovan" : ""}
                 >
                   Obriši
-                </button>
+            </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <button onClick={() => {
-        setIsModalOpen(true);
-        setSuccessMessage('');
-        setError('');
-      }} style={{
-        marginTop: '20px',
-        backgroundColor: '#82b74b',
-        color: 'white',
-        border: 'none',
-        padding: '10px 20px',
-        fontSize: '16px',
-        borderRadius: '6px',
-        cursor: 'pointer'
-      }}>
+      <button
+        onClick={() => {
+          if (!isRestaurantSuspended) {
+            setIsModalOpen(true);
+            setSuccessMessage('');
+            setError('');
+          }
+        }}
+        style={{
+          marginTop: '20px',
+          backgroundColor: '#82b74b',
+          color: 'white',
+          border: 'none',
+          padding: '10px 20px',
+          fontSize: '16px',
+          borderRadius: '6px',
+          cursor: isRestaurantSuspended ? 'not-allowed' : 'pointer',
+          opacity: isRestaurantSuspended ? 0.5 : 1,
+        }}
+        disabled={isRestaurantSuspended}
+        title={isRestaurantSuspended ? "Nalog je suspendovan, ne možete kreirati obaveštenja" : ""}
+      >
         Kreiraj obaveštenje
       </button>
+
 
       {isModalOpen && (
         <div style={{
@@ -290,16 +303,23 @@ const RestaurantNotifications = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button onClick={handleCreate} disabled={loading} style={{
+            <button
+              onClick={handleCreate}
+              disabled={loading || isRestaurantSuspended}
+              style={{
                 backgroundColor: '#82b74b',
                 color: 'white',
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: '6px',
-                cursor: 'pointer'
-              }}>
-                {loading ? 'Sačuvavanje...' : 'Sačuvaj'}
-              </button>
+                cursor: isRestaurantSuspended ? 'not-allowed' : 'pointer',
+                opacity: isRestaurantSuspended ? 0.5 : 1,
+              }}
+              title={isRestaurantSuspended ? "Nalog je suspendovan" : ""}
+            >
+              {loading ? 'Čuvanje...' : 'Sačuvaj'}
+            </button>
+
               <button onClick={() => {
                 setIsModalOpen(false);
                 setError('');

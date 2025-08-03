@@ -229,6 +229,12 @@ const handleOrder = () => {
     restaurant_id,
   } = formData;
 
+  const cardNumberPattern = /^\d{16}$/; // matches exactly 16 digits
+  if (!cardNumberPattern.test(card_number)) {
+    alert("Broj kartice mora biti tačno 16 cifara.");
+    return;
+  }
+
   if (!address || !postal_code || !card_number || !total_price || !restaurant_id) {
     alert("Molimo popunite sva polja pre nego što pošaljete narudžbinu.");
     return;
@@ -311,6 +317,7 @@ const handleOrder = () => {
     const payload = {
       ...comment,
       id: "",
+      reply_to : "",
       author_email: user.email,
       restaurant_id: localStorage.getItem("selected_restaurant_id"),
       comment_rating: 0,
@@ -319,7 +326,14 @@ const handleOrder = () => {
     };
 
     try {
-      await axios.post("http://localhost:8080/api/comment/addComment", payload);
+      await axios.post("http://localhost:8080/api/comment/addComment", payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+          }
+        }
+        );
       alert("Vaša ocena je uspešno poslata.");
       setShowRatingModal(false);
       setComment({
@@ -433,14 +447,27 @@ const handleOrder = () => {
       {user && (
         <div className="text-center mt-2">
           <span
-            onClick={() => !hasUserCommented && setShowRatingModal(true)}
+            onClick={() => {
+              if (!hasUserCommented && !user.is_account_suspended) {
+                setShowRatingModal(true);
+              }
+            }}
             style={{
-              textDecoration: hasUserCommented ? "none" : "underline",
-              color: hasUserCommented ? "gray" : "#007bff",
-              cursor: hasUserCommented ? "default" : "pointer",
+              textDecoration:
+                hasUserCommented || user.is_account_suspended ? "none" : "underline",
+              color:
+                hasUserCommented || user.is_account_suspended ? "gray" : "#007bff",
+              cursor:
+                hasUserCommented || user.is_account_suspended ? "default" : "pointer",
               userSelect: "none",
             }}
-            title={hasUserCommented ? "Već ste ocenili ovaj restoran" : ""}
+            title={
+              hasUserCommented
+                ? "Već ste ocenili ovaj restoran"
+                : user.is_account_suspended
+                ? "Opcija komentarisanja onemogućena. Obratite se administratoru za pomoć."
+                : ""
+            }
           >
             Oceni restoran
           </span>

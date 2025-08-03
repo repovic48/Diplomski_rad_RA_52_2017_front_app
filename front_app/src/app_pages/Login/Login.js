@@ -23,6 +23,12 @@ const Login = () => {
     }));
   };
 
+  const getUserType = (type) => {
+    if (type === 0) return "Administrator";
+    if (type === 1) return "User";
+    return "Nepoznat";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -76,7 +82,17 @@ const Login = () => {
         if (decodedToken.is_account_active === "False") {
           navigate('/ActivateAccount', { state: { loggedInUser: decodedToken } });
         } else {
-          navigate('/');
+          const response_get = await axios.get(
+            'http://localhost:8080/api/user/getByEmail/' + email
+          );
+          const user = response_get.data; // Store the fetched user data
+          user.user_type = getUserType(user.user_type)
+          if(user.user_type === "Administrator"){
+            navigate('/AdministratorLandingPage');
+          }
+          else{
+            navigate('/');
+          }
         }
       }
     } catch (err) {

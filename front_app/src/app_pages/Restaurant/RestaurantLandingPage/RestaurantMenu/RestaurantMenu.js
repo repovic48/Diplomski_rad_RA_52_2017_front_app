@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useLocation } from 'react-router-dom';
+import { Tooltip, OverlayTrigger } from 'react-bootstrap'; // Import Tooltip and OverlayTrigger
 
 const RestaurantMenu = () => {
   const location = useLocation();
-  const loggedInRestaurant = location.state?.loggedInRestaurant || '';
+  const storedRestaurantEmail = localStorage.getItem("restaurant_email")?.trim();
   const [foods, setFoods] = useState([]);
   const [restaurant, setRestaurant] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ const RestaurantMenu = () => {
   const [editingFoodId, setEditingFoodId] = useState(null);
 
   useEffect(() => {
-    axios.get(`http://localhost:8080/api/restaurant/getRestaurantByEmail/${loggedInRestaurant.email}`)
+    axios.get(`http://localhost:8080/api/restaurant/getRestaurantByEmail/${storedRestaurantEmail}`)
       .then((response) => {
         setFoods(response.data.menu);
         setRestaurant(response.data);
@@ -78,7 +79,12 @@ const RestaurantMenu = () => {
   const handleDelete = (foodId) => {
     if (window.confirm("Da li ste sigurni da želite da obrišete ovu stavku?")) {
       axios
-        .delete(`http://localhost:8080/api/restaurant/DeleteFood/${foodId}`)
+        .delete(`http://localhost:8080/api/restaurant/DeleteFood/${foodId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+          }
+        })
         .then(() => {
           setFoods((prev) => prev.filter((f) => f.id !== foodId));
         })
@@ -100,8 +106,18 @@ const RestaurantMenu = () => {
     };
 
     const request = editMode
-      ? axios.put(`http://localhost:8080/api/restaurant/updateFood/`, foodData)
-      : axios.post("http://localhost:8080/api/restaurant/AddFood", foodData);
+      ? axios.put(`http://localhost:8080/api/restaurant/updateFood/`, foodData, {
+          headers: {
+            'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+          }
+        })
+      : axios.post("http://localhost:8080/api/restaurant/AddFood", foodData, {
+          headers: {
+            'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
+          }
+        });
 
     request
       .then((response) => {
@@ -122,6 +138,9 @@ const RestaurantMenu = () => {
         console.error("Greška prilikom čuvanja stavke:", error);
       });
   };
+
+  // Check if the restaurant is suspended
+  const isRestaurantSuspended = restaurant.account_suspended;
 
   if (loading) {
     return (
@@ -162,8 +181,48 @@ const RestaurantMenu = () => {
                 <td>{food.available ? "Na stanju" : "Nedostupno"}</td>
                 <td>{food.discount || 0}%</td>
                 <td>
-                  <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(food)}>Izmeni</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => handleDelete(food.id)}>Obriši</button>
+                {isRestaurantSuspended ? (
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={
+                      <Tooltip id="tooltip-disabled">
+                        Nalog nije aktivan, za podršku se obratite administratoru.
+                      </Tooltip>
+                    }
+                  >
+                    <div>
+                      <button
+                        className="btn btn-sm btn-warning me-2"
+                        onClick={() => handleEdit(food)}
+                        disabled
+                      >
+                        Izmeni
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleDelete(food.id)}
+                        disabled
+                      >
+                        Obriši
+                      </button>
+                    </div>
+                  </OverlayTrigger>
+                ) : (
+                  <div>
+                    <button
+                      className="btn btn-sm btn-warning me-2"
+                      onClick={() => handleEdit(food)}
+                    >
+                      Izmeni
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDelete(food.id)}
+                    >
+                      Obriši
+                    </button>
+                  </div>
+                )}
                 </td>
               </tr>
             ))}
@@ -173,17 +232,35 @@ const RestaurantMenu = () => {
 
       {/* Dodaj stavku button */}
       <div className="text-center mt-4">
-        <button
-          className="btn"
-          style={{ backgroundColor: "#82b74b", color: "white" }}
-          onClick={() => {
-            setShowModal(true);
-            setEditMode(false);
-            setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true, popust: 0 });
-          }}
-        >
-          Dodaj stavku
-        </button>
+        {isRestaurantSuspended ? (
+  <OverlayTrigger
+    placement="top"
+    overlay={
+      <Tooltip id="tooltip-disabled">
+        Nalog nije aktivan, za podršku se obratite administratoru.
+      </Tooltip>
+    }
+  >
+    <div>
+      <button className="btn" style={{ backgroundColor: "#82b74b", color: "white" }} disabled>
+        Dodaj stavku
+      </button>
+    </div>
+  </OverlayTrigger>
+) : (
+  <button
+    className="btn"
+    style={{ backgroundColor: "#82b74b", color: "white" }}
+    onClick={() => {
+      setShowModal(true);
+      setEditMode(false);
+      setNewFood({ naziv: "", cena: "", slika: "", dostupnost: true, popust: 0 });
+    }}
+  >
+    Dodaj stavku
+  </button>
+)}
+
       </div>
 
       {/* Modal */}
@@ -204,6 +281,7 @@ const RestaurantMenu = () => {
                     name="naziv"
                     value={newFood.naziv}
                     onChange={handleInputChange}
+                    disabled={isRestaurantSuspended}
                   />
                 </div>
                 <div className="mb-3">
@@ -214,6 +292,7 @@ const RestaurantMenu = () => {
                     name="cena"
                     value={newFood.cena}
                     onChange={handleInputChange}
+                    disabled={isRestaurantSuspended}
                   />
                 </div>
                 <div className="mb-3">
@@ -228,6 +307,7 @@ const RestaurantMenu = () => {
                     onChange={(e) =>
                       setNewFood((prev) => ({ ...prev, popust: parseInt(e.target.value) || 0 }))
                     }
+                    disabled={isRestaurantSuspended}
                   />
                 </div>
                 <div className="mb-3">
@@ -237,6 +317,7 @@ const RestaurantMenu = () => {
                     className="form-control"
                     accept="image/*"
                     onChange={handleImageUpload}
+                    disabled={isRestaurantSuspended}
                   />
                 </div>
                 {newFood.slika && (
@@ -260,6 +341,7 @@ const RestaurantMenu = () => {
                         onChange={() =>
                           setNewFood((prev) => ({ ...prev, dostupnost: true }))
                         }
+                        disabled={isRestaurantSuspended}
                       />
                       <label className="form-check-label" htmlFor="naStanju">Na stanju</label>
                     </div>
@@ -273,6 +355,7 @@ const RestaurantMenu = () => {
                         onChange={() =>
                           setNewFood((prev) => ({ ...prev, dostupnost: false }))
                         }
+                        disabled={isRestaurantSuspended}
                       />
                       <label className="form-check-label" htmlFor="nedostupno">Nedostupno</label>
                     </div>
@@ -280,11 +363,12 @@ const RestaurantMenu = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Zatvori</button>
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={isRestaurantSuspended}>Zatvori</button>
                 <button
                   className="btn"
                   style={{ backgroundColor: "#82b74b", color: "white" }}
                   onClick={handleSave}
+                  disabled={isRestaurantSuspended}
                 >
                   Sačuvaj
                 </button>

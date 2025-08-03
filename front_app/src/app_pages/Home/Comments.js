@@ -318,7 +318,13 @@ const Comments = () => {
                         ...replyComment,
                         date: new Date().toISOString(),
                       };
-                      await axios.post("http://localhost:8080/api/comment/addComment", payload);
+                      await axios.post("http://localhost:8080/api/comment/addComment", payload,
+                        {
+                          headers: {
+                            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+                          }
+                        }
+                      );
                       setShowReplyModal(false);
                       setReplyComment({
                         id: "",
@@ -397,6 +403,12 @@ const Comments = () => {
                       await axios.put(
                         `http://localhost:8080/api/comment/updateComment/${editComment.id}`,
                         payload
+                        ,
+                        {
+                          headers: {
+                            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+                          }
+                        }
                       );
                       setShowEditModal(false);
                       const res = await axios.get(

@@ -67,7 +67,7 @@ const RestaurantRegister = () => {
       password,
       loyalty_points: 0,  // Default loyalty points
       is_account_active: false,  // Default boolean
-      is_account_suspended: false,  // Default boolean
+      is_account_suspended: true,  // Default boolean
       user_type : "User"
     };
   

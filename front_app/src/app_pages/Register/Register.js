@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+
 import axios from 'axios';
 
 const Register = () => {
@@ -16,6 +18,7 @@ const Register = () => {
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
 
   // Funkcija za promenu vrednosti unosa u formi
   const handleChange = (e) => {
@@ -67,7 +70,7 @@ const Register = () => {
       password,
       loyalty_points: 0,  // Default loyalty points
       is_account_active: false,  // Default boolean
-      is_account_suspended: false,  // Default boolean
+      is_account_suspended: true,  // Default boolean
       user_type : "User"
     };
   
@@ -83,8 +86,9 @@ const Register = () => {
         }
       );
     
-      if (response.status === 200) {
+      if (response.status === 201) {
         setSuccessMessage('Registracija je uspešna!');
+        setTimeout(() => navigate('/Login'), 2000);
       }
     } catch (error) {
       setError('Registracija nije uspela. Pokušajte ponovo kasnije.');

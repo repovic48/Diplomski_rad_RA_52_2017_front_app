@@ -45,11 +45,12 @@ const ActivateAccount = () => {
         {
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
           }
         }
       );
       
-        if (response.status === 200) {
+        if (response.status === 201) {
           setSuccessMessage('Verifikacija uspešna!');
           setTimeout(() => navigate('/'), 2000);
         } else {

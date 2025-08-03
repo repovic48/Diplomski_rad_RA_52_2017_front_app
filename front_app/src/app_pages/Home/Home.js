@@ -8,37 +8,50 @@ const Home = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [commentsMap, setCommentsMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [newsComments, setNewsComments] = useState([]);
 
-  useEffect(() => {
-    axios
-      .get("http://localhost:8080/api/restaurant/getAllRestaurants")
-      .then(async (response) => {
-        const fetchedRestaurants = response.data;
-        setRestaurants(fetchedRestaurants);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // Fetch restaurants
+      const restaurantRes = await axios.get("http://localhost:8080/api/restaurant/getAllRestaurants");
+      const fetchedRestaurants = restaurantRes.data;
+      setRestaurants(fetchedRestaurants);
 
-        const commentsObj = {};
-        await Promise.all(
-          fetchedRestaurants.map(async (restaurant) => {
-            try {
-              const res = await axios.get(
-                `http://localhost:8080/api/comment/getCommentsByRestaurantId/${restaurant.id}`
-              );
-              commentsObj[restaurant.id] = res.data;
-            } catch (error) {
-              console.error(`Error fetching comments for restaurant ${restaurant.id}:`, error);
-              commentsObj[restaurant.id] = [];
-            }
-          })
-        );
+      // Fetch comments for each restaurant
+      const commentsObj = {};
+      await Promise.all(
+        fetchedRestaurants.map(async (restaurant) => {
+          try {
+            const res = await axios.get(
+              `http://localhost:8080/api/comment/getCommentsByRestaurantId/${restaurant.id}`
+            );
+            commentsObj[restaurant.id] = res.data;
+          } catch (error) {
+            console.error(`Error fetching comments for restaurant ${restaurant.id}:`, error);
+            commentsObj[restaurant.id] = [];
+          }
+        })
+      );
+      setCommentsMap(commentsObj);
 
-        setCommentsMap(commentsObj);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching restaurants:", error);
-        setLoading(false);
-      });
-  }, []);
+      // Fetch all news comments
+      const newsRes = await axios.get("http://localhost:8080/api/comment/getAllNews");
+      const sortedNews = (newsRes.data || [])
+        .sort((a, b) => new Date(b.date_of_creation) - new Date(a.date_of_creation))
+        .slice(0, 3);
+      setNewsComments(sortedNews);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
 
   const calculateDiscountedPrice = (price, discount) => {
     return (price - price * (discount / 100)).toFixed(2);
@@ -70,6 +83,28 @@ const Home = () => {
 
   return (
     <div className="container py-5">
+
+      <div className="mb-4">
+        <h4 className="text-center mb-3" style={{ color: "#6ba446" }}>Najnovije vesti</h4>
+        {newsComments.length > 0 ? (
+          <div className="row justify-content-center">
+            {newsComments.map((news, index) => (
+              <div key={index} className="col-md-8 mb-3">
+                <div className="border rounded p-3 bg-light shadow-sm">
+                  <small className="text-muted">
+                    {new Date(news.date_of_creation).toLocaleString("sr-RS")}
+                  </small>
+                  <p className="mb-0">{news.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted text-center">Nema dostupnih vesti.</p>
+        )}
+      </div>
+
+
       <h1 className="text-center mb-5" style={{ color: "#82b74b" }}>
         Restorani
       </h1>

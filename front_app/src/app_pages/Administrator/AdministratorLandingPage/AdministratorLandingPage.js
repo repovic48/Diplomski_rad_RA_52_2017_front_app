@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Table, Form, Button } from 'react-bootstrap';
+import { Container, Table, Form, Button , Modal} from 'react-bootstrap';
 import axios from 'axios';
 
 const AdministratorLandingPage = () => {
@@ -10,8 +10,18 @@ const AdministratorLandingPage = () => {
   const [editingRestaurantEmail, setEditingRestaurantEmail] = useState(null);
   const [editedRestaurants, setEditedRestaurants] = useState({});
   const [comments, setComments] = useState([]);
-
+  const [news, setNews] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newNewsContent, setNewNewsContent] = useState("");
   useEffect(() => {
+    axios.get("http://localhost:8080/api/comment/getAllNews")
+      .then((response) => {
+        setNews(response.data);
+      })
+      .catch((error) => {
+        console.error("Greška pri dohvaćanju vesti:", error);
+    });
+
     axios.get("http://localhost:8080/api/restaurant/getAllRestaurants")
         .then((response) => {
           setRestaurants(response.data);
@@ -76,7 +86,9 @@ const handleAcceptCommentDelete = async (commentId) => {
 
   try {
     await axios.put("http://localhost:8080/api/comment/updateComment/" + updatedComment.id, updatedComment, {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json',
+                  Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+       }
     });
     setComments(comments.filter(comment => comment.id !== commentId));
   } catch (error) {
@@ -92,7 +104,7 @@ const handleAcceptCommentDelete = async (commentId) => {
 
     try {
       await axios.put("http://localhost:8080/api/comment/updateComment/" + updatedComment.id, updatedComment, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json',Authorization: `Bearer ${localStorage.getItem("user_jwt")}`}
       });
       setComments(comments.filter(comment => comment.id !== commentId));
     } catch (error) {
@@ -125,6 +137,7 @@ const handleAcceptCommentDelete = async (commentId) => {
           {
             headers: {
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
             },
           }
         );
@@ -139,7 +152,12 @@ const handleAcceptCommentDelete = async (commentId) => {
   };
 
   const handleDelete = (userEmail) => {
-    axios.delete(`http://localhost:8080/api/user/delete/${userEmail}`)
+    axios.delete(`http://localhost:8080/api/user/delete/${userEmail}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+              }
+            })
       .then(() => {
         setUsers(users.filter(user => user.email !== userEmail));
       })
@@ -175,11 +193,12 @@ const handleAcceptCommentDelete = async (commentId) => {
     
     try {
       const response = await axios.put(
-        'http://localhost:8080/api/restaurant/update',
+        'http://localhost:8080/api/restaurant/updateRestaurant',
         restaurantToUpdate,
         {
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
           },
         }
       );
@@ -194,7 +213,12 @@ const handleAcceptCommentDelete = async (commentId) => {
   };
 
   const handleDeleteRestaurant = (restaurantEmail) => {
-    axios.delete(`http://localhost:8080/api/restaurant/delete/${restaurantEmail}`)
+    axios.delete(`http://localhost:8080/api/restaurant/delete/${restaurantEmail}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+              }
+            })
       .then(() => {
         setRestaurants(restaurants.filter(restaurant => restaurant.email !== restaurantEmail));
       })
@@ -270,12 +294,16 @@ const handleAcceptCommentDelete = async (commentId) => {
               )}
               <td><Form.Check type="checkbox" checked={user.is_account_active} readOnly /></td>
               <td>
-                <Form.Check 
-                  type="checkbox" 
-                  checked={editedUsers[user.id]?.is_account_suspended || user.is_account_suspended} 
-                  disabled={editingUserId !== user.id} // Make it editable only when the user is being edited
-                  onChange={(e) => handleSuspendChange(user.id, e.target.checked)} 
-                />
+              <Form.Check 
+                type="checkbox" 
+                checked={
+                  editedUsers[user.id]?.is_account_suspended !== undefined 
+                    ? editedUsers[user.id].is_account_suspended 
+                    : user.is_account_suspended
+                } 
+                disabled={editingUserId !== user.id} 
+                onChange={(e) => handleSuspendChange(user.id, e.target.checked)} 
+              />
               </td>
               <td>{user.verification_code}</td>
               <td>{getUserType(user.user_type)}</td>
@@ -315,12 +343,28 @@ const handleAcceptCommentDelete = async (commentId) => {
               {editingRestaurantEmail === restaurant.email ? (
                 <>
                   <td><Form.Control value={editedRestaurants[restaurant.email].name} onChange={(e) => setEditedRestaurants({ ...editedRestaurants, [restaurant.email]: { ...editedRestaurants[restaurant.email], name: e.target.value } })} /></td>
-                  <td><Form.Control value={editedRestaurants[restaurant.email].postal_code} onChange={(e) => setEditedRestaurants({ ...editedRestaurants, [restaurant.email]: { ...editedRestaurants[restaurant.email], postal_code: e.target.value } })} /></td>
-                  <td>
-                    <Form.Control 
-                      as="select" 
-                      value={editedRestaurants[restaurant.email].address || ''} 
-                      onChange={(e) => setEditedRestaurants({ ...editedRestaurants, [restaurant.email]: { ...editedRestaurants[restaurant.email], address: e.target.value } })}
+                    <td>
+                      <Form.Control
+                        value={editedRestaurants[restaurant.email].address}
+                        onChange={(e) => setEditedRestaurants({
+                          ...editedRestaurants,
+                          [restaurant.email]: {
+                            ...editedRestaurants[restaurant.email],
+                            address: e.target.value
+                          }
+                        })}
+                      />
+                    </td>                  <td>
+                    <Form.Control
+                      as="select"
+                      value={editedRestaurants[restaurant.email].postal_code || ''}
+                      onChange={(e) => setEditedRestaurants({
+                        ...editedRestaurants,
+                        [restaurant.email]: {
+                          ...editedRestaurants[restaurant.email],
+                          postal_code: e.target.value
+                        }
+                      })}
                     >
                       <option value="11000">11000 – Beograd</option>
                       <option value="21000">21000 – Novi Sad</option>
@@ -344,25 +388,25 @@ const handleAcceptCommentDelete = async (commentId) => {
               ) : (
                 <>
                   <td>{restaurant.name}</td>
-                  <td>{restaurant.postal_code}</td>
                   <td>{restaurant.address}</td>
+                  <td>{restaurant.postal_code}</td>
                   <td>{restaurant.email}</td>
                 </>
               )}
               <td><Form.Check type="checkbox" checked={restaurant.account_active} readOnly /></td>
               <td>
-                <Form.Check 
-                  type="checkbox" 
-                  checked={editedRestaurants[restaurant.email]?.account_suspended || restaurant.account_suspended} 
-                  disabled={editingRestaurantEmail !== restaurant.email} // Make it editable only when the restaurant is being edited
-                  onChange={(e) => setEditedRestaurants({
-                    ...editedRestaurants,
-                    [restaurant.email]: {
-                      ...editedRestaurants[restaurant.email],
-                      account_suspended: e.target.checked
-                    }
-                  })} 
-                />
+              <Form.Check 
+                type="checkbox" 
+                checked={editedRestaurants[restaurant.email]?.account_suspended || restaurant.account_suspended} 
+                disabled={editingRestaurantEmail !== restaurant.email} 
+                onChange={(e) => setEditedRestaurants({
+                  ...editedRestaurants,
+                  [restaurant.email]: {
+                    ...editedRestaurants[restaurant.email],
+                    account_suspended: e.target.checked
+                  }
+                })} 
+              />
               </td>
               <td>
                 {editingRestaurantEmail === restaurant.email ? (
@@ -426,7 +470,91 @@ const handleAcceptCommentDelete = async (commentId) => {
           )}
         </tbody>
       </Table>
-
+    <h2 className="mt-4">Vesti</h2>
+    <Table striped bordered hover className="mt-3">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Sadržaj</th>
+        </tr>
+      </thead>
+      <tbody>
+        {news.length === 0 ? (
+          <tr>
+            <td colSpan="2" className="text-center">Nema dostupnih vesti.</td>
+          </tr>
+        ) : (
+          news.map(item => (
+            <tr key={item.id}>
+              <td>{new Date(item.date_of_creation).toLocaleDateString()}</td>
+              <td>{item.content}</td>
+            </tr>
+          ))
+        )}
+        <tr>
+          <td colSpan="2" className="text-center">
+            <Button variant="primary" onClick={() => setShowAddModal(true)}>
+              Dodaj vest
+            </Button>
+          </td>
+        </tr>
+      </tbody>
+    </Table>
+<Modal show={showAddModal} onHide={() => setShowAddModal(false)}>
+  <Modal.Header closeButton>
+    <Modal.Title>Dodaj novu vest</Modal.Title>
+  </Modal.Header>
+  <Modal.Body>
+    <Form>
+      <Form.Group>
+        <Form.Label>Sadržaj</Form.Label>
+        <Form.Control
+          as="textarea"
+          rows={3}
+          value={newNewsContent}
+          onChange={(e) => setNewNewsContent(e.target.value)}
+        />
+      </Form.Group>
+    </Form>
+  </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={() => setShowAddModal(false)}>
+        Otkaži
+      </Button>
+      <Button
+        variant="primary"
+        onClick={() => {
+          var new_news = {
+            id : "",
+            content : newNewsContent,
+            date_of_creation : new Date().toISOString()
+          }
+          axios
+            .post("http://localhost:8080/api/comment/addNews", new_news,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+              }
+            }
+            )
+            .then(() => {
+              setShowAddModal(false);
+              setNewNewsContent("");
+              // refresh news
+              return axios.get("http://localhost:8080/api/comment/getAllNews");
+            })
+            .then((res) => {
+              setNews(res.data);
+            })
+            .catch((err) => {
+              console.error("Greška pri dodavanju vesti:", err);
+            });
+        }}
+      >
+        Dodaj
+      </Button>
+    </Modal.Footer>
+  </Modal>
     </Container>
   );
 };

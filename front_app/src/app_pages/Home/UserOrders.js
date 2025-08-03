@@ -49,7 +49,12 @@ const UserOrders = () => {
 
       // Zatim porudžbine
       const ordersResponse = await axios.get(
-        `http://localhost:8080/api/order/GetOrdersByCustomerEmail/${email}`
+        `http://localhost:8080/api/order/GetOrdersByCustomerEmail/${email}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+          }
+        }
       );
       const ordersData = ordersResponse.data;
 

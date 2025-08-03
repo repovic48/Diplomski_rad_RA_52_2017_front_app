@@ -72,7 +72,9 @@ const RestaurantComments = () => {
     try {
       await axios.put(
         `http://localhost:8080/api/comment/updateComment/${comment.id}`,
-        updated
+        updated, {
+        headers: { 'Content-Type': 'application/json',Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`}
+      }
       );
 
       const res = await axios.get(
