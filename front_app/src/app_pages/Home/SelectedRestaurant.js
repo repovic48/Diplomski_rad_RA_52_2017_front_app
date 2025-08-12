@@ -289,7 +289,12 @@ const handleOrder = () => {
   try {
     const userResponse = await axios.put(
       `http://localhost:8080/api/user/update`,
-      updatedUser
+      updatedUser,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+        }
+      }
     );
     setUser(userResponse.data);
   } catch (error) {

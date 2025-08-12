@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const RestaurantRegister = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const RestaurantRegister = () => {
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -56,7 +58,7 @@ const RestaurantRegister = () => {
       postal_code: parseInt(postal_code),  // Convert postal_code to integer
       verification_code: "0000", // Auto-generated verification code
       account_active: false,  // Default value
-      account_suspended: false,  // Default value
+      account_suspended: true,  // Default value
       menu: [],
       notifications: [],
     };
@@ -73,8 +75,9 @@ const RestaurantRegister = () => {
         }
       );
 
-      if (response.status === 200) {
+      if (response.status === 201) {
         setSuccessMessage('Registracija je uspešna!');
+        setTimeout(() => navigate('/RestaurantLogin'), 2000);
       }
     } catch (error) {
       setError('Registracija nije uspela. Pokušajte ponovo kasnije.');

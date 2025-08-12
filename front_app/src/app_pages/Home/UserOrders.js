@@ -103,7 +103,7 @@ const UserOrders = () => {
 
       setOrders(ordersWithDetails);
     } catch (err) {
-      setError("Greška prilikom preuzimanja podataka.");
+      setError("Nema prethodnih porudzbina.");
     } finally {
       setLoading(false);
     }

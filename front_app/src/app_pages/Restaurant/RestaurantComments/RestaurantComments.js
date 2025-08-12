@@ -181,7 +181,7 @@ const RestaurantComments = () => {
   };
 
   if (loading) return <p>Loading comments...</p>;
-  if (!restaurant) return <p>Restaurant not found.</p>;
+  if (!restaurant) return <p>Trenutno nema ocena.</p>;
 
   // Uklonjeno filtriranje deleted == false da i obrisani budu vidljivi
   const topLevelComments = comments.filter(

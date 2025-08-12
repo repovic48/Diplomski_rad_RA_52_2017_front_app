@@ -37,11 +37,12 @@ const RestaurantActivateAccount = () => {
         const response = await axios.put(
           'http://localhost:8080/api/restaurant/verify',
           restaurant, // Send the object directly, not wrapped in another object
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            }
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("restaurant_jwt")}`,
           }
+        }
         );
       
         if (response.status === 200) {

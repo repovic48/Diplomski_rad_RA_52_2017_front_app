@@ -104,8 +104,11 @@ const handleAcceptCommentDelete = async (commentId) => {
 
     try {
       await axios.put("http://localhost:8080/api/comment/updateComment/" + updatedComment.id, updatedComment, {
-        headers: { 'Content-Type': 'application/json',Authorization: `Bearer ${localStorage.getItem("user_jwt")}`}
-      });
+          headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem("user_jwt")}`,
+            },      
+          });
       setComments(comments.filter(comment => comment.id !== commentId));
     } catch (error) {
       console.error("Greška pri odbijanju brisanja komentara:", error);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const RestaurantRegister = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const RestaurantRegister = () => {
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
 
   // Funkcija za promenu vrednosti unosa u formi
   const handleChange = (e) => {
@@ -73,7 +75,7 @@ const RestaurantRegister = () => {
   
     try {
       const response = await axios.post(
-        'http://localhost:8080/api/user/registerUser',
+        'http://localhost:8080/api/restaurant/register',
         dataToSend,
         {
           headers: {
@@ -83,8 +85,9 @@ const RestaurantRegister = () => {
         }
       );
     
-      if (response.status === 200) {
+      if (response.status === 201) {
         setSuccessMessage('Registracija je uspešna!');
+        setTimeout(() => navigate('/RestaurantLogin'), 2000);
       }
     } catch (error) {
       setError('Registracija nije uspela. Pokušajte ponovo kasnije.');

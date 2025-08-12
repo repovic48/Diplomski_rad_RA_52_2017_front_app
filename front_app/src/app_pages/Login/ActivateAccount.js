@@ -50,7 +50,7 @@ const ActivateAccount = () => {
         }
       );
       
-        if (response.status === 201) {
+        if (response.status === 200) {
           setSuccessMessage('Verifikacija uspešna!');
           setTimeout(() => navigate('/'), 2000);
         } else {

@@ -62,7 +62,7 @@ const RestaurantOrders = () => {
 
         setOrders(ordersWithItems);
       } catch (err) {
-        setError("Greška prilikom preuzimanja porudžbina.");
+        setError("Jos uvek nema porudzbina.");
       } finally {
         setLoading(false);
       }
